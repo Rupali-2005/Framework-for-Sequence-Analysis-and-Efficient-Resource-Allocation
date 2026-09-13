@@ -1,4 +1,5 @@
 import os
+from threading import Thread
 from flask import Flask, jsonify, request, send_from_directory
 from dotenv import load_dotenv
 from models import Machine, Process
@@ -11,11 +12,13 @@ app = Flask(__name__, static_folder="../frontend", static_url_path="")
 machines: list[Machine] = []
 processes: list[Process] = []
 next_machine_id = next_process_id = 1
+simulation_running = False
+simulation_result = None
 
 def process_dict(p):
     return {"id": p.id, "name": p.name, "sequence": p.sequence, "pattern": p.pattern, "priority": p.priority,
             "matches": len(p.matches) if p.status == "Completed" else None, "match_positions": p.matches if p.status == "Completed" else [],
-            "estimated_time": p.estimated_time, "status": p.status}
+            "processing_time": p.processing_time, "status": p.status}
 
 @app.get("/")
 def home(): return send_from_directory(app.static_folder, "index.html")
@@ -65,9 +68,25 @@ def run(algorithm, calculate_positions=True, real_time=False):
 
 @app.post("/api/simulate")
 def simulation():
+    global simulation_running, simulation_result
     algorithm = (request.get_json() or {}).get("algorithm", "FCFS").upper()
     if algorithm not in {"FCFS", "SJF", "PRIORITY"}: return jsonify(error="Unknown algorithm"), 400
-    result, status = run(algorithm, real_time=True); return jsonify(result), status
+    if simulation_running: return jsonify(error="A simulation is already running"), 409
+    if not machines or not processes: return jsonify(error="Add at least one machine and process"), 400
+    simulation_running, simulation_result = True, None
+    for process in processes:
+        process.status, process.processing_time, process.matches = "Queued", 0.0, []
+    def worker():
+        global simulation_running, simulation_result
+        result, status = run(algorithm, real_time=True)
+        simulation_result = {"result": result, "status": status}
+        simulation_running = False
+    Thread(target=worker, daemon=True).start()
+    return jsonify(running=True), 202
+
+@app.get("/api/simulation")
+def simulation_status():
+    return jsonify(running=simulation_running, result=simulation_result)
 
 @app.post("/api/compare")
 def compare():

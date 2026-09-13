@@ -18,5 +18,5 @@ class Process:
     pattern: str
     priority: int
     matches: list[int] = field(default_factory=list)
-    estimated_time: float = 0.0
+    processing_time: float = 0.0
     status: str = "Queued"

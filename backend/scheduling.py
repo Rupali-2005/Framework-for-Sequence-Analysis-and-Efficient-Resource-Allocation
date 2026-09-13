@@ -23,14 +23,15 @@ def simulate(machines: list[Machine], processes: list[Process], algorithm: str, 
         machine = min(machines, key=lambda m: (m.busy_until + ceil(len(process.sequence) / m.capacity), m.id))
         duration = ceil(len(process.sequence) / machine.capacity)
         start, finish = machine.busy_until, round(machine.busy_until + duration, 2)
+        process.status = "Processing"
         if calculate_positions:
             process.matches = find_all_by_capacity(process.sequence, process.pattern, machine.capacity, 1 if real_time else 0)
-        process.estimated_time, process.status = duration, "Completed"
+        process.processing_time, process.status = duration, "Completed"
         machine.ready_queue.append(process.id)
         machine.busy_until = finish
         allocations.append({"process_id": process.id, "machine_id": machine.id, "machine": machine.name,
                             "start": start, "finish": finish, "waiting_time": start,
-                            "turnaround_time": finish, "estimated_time": duration})
+                            "turnaround_time": finish, "processing_time": duration})
     machine_data = [{"id": m.id, "name": m.name, "capacity": m.capacity,
                      "ready_queue": m.ready_queue, "busy_until": m.busy_until} for m in machines]
     return allocations, machine_data
