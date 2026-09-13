@@ -5,6 +5,7 @@ from kmp import find_all
 from models import Machine, Process
 from scheduling import simulate
 from metrics import calculate
+from storage import save_machine, save_process, save_run
 
 load_dotenv()
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
@@ -32,7 +33,7 @@ def add_machine():
         machine = Machine(next_machine_id, str(data["name"]).strip(), int(data["capacity"]))
         if not machine.name or machine.capacity < 1: raise ValueError
     except (KeyError, TypeError, ValueError): return jsonify(error="Name and positive capacity are required"), 400
-    next_machine_id += 1; machines.append(machine)
+    next_machine_id += 1; machines.append(machine); save_machine(machine)
     return jsonify({"id":machine.id,"name":machine.name,"capacity":machine.capacity,"queue":[]}), 201
 
 @app.post("/api/processes")
@@ -45,13 +46,16 @@ def add_process():
         if not process.name or not sequence or not pattern or process.priority < 1 or process.work_units < 1: raise ValueError
     except (KeyError, TypeError, ValueError): return jsonify(error="Provide valid process fields"), 400
     process.matches = find_all(process.sequence, process.pattern)
-    next_process_id += 1; processes.append(process)
+    next_process_id += 1; processes.append(process); save_process(process)
     return jsonify(process_dict(process)), 201
 
 def run(algorithm):
     try: allocations, machine_data = simulate(machines, processes, algorithm)
     except ValueError as error: return {"error": str(error)}, 400
-    return {"algorithm": algorithm, "allocations": allocations, "machines": machine_data, "processes": [process_dict(p) for p in processes], "metrics": calculate(allocations, machine_data)}, 200
+    metrics = calculate(allocations, machine_data)
+    for process in processes: save_process(process)
+    saved = save_run(algorithm, metrics, allocations)
+    return {"algorithm": algorithm, "allocations": allocations, "machines": machine_data, "processes": [process_dict(p) for p in processes], "metrics": metrics, "storage": "MySQL" if saved else "memory"}, 200
 
 @app.post("/api/simulate")
 def simulation():
