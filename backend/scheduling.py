@@ -12,7 +12,7 @@ def ordered(processes: list[Process], algorithm: str) -> list[Process]:
     return sorted(processes, key=lambda p: p.id)  # FCFS
 
 
-def simulate(machines: list[Machine], processes: list[Process], algorithm: str, calculate_positions: bool = True) -> tuple[list[dict], list[dict]]:
+def simulate(machines: list[Machine], processes: list[Process], algorithm: str, calculate_positions: bool = True, real_time: bool = False) -> tuple[list[dict], list[dict]]:
     if not machines:
         raise ValueError("Add at least one virtual machine")
     for machine in machines:
@@ -24,7 +24,7 @@ def simulate(machines: list[Machine], processes: list[Process], algorithm: str, 
         duration = ceil(len(process.sequence) / machine.capacity)
         start, finish = machine.busy_until, round(machine.busy_until + duration, 2)
         if calculate_positions:
-            process.matches = find_all_by_capacity(process.sequence, process.pattern, machine.capacity)
+            process.matches = find_all_by_capacity(process.sequence, process.pattern, machine.capacity, 1 if real_time else 0)
         process.estimated_time, process.status = duration, "Completed"
         machine.ready_queue.append(process.id)
         machine.busy_until = finish

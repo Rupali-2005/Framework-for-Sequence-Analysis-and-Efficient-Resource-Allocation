@@ -55,8 +55,8 @@ def add_process():
     next_process_id += 1; processes.append(process); save_process(process)
     return jsonify(process_dict(process)), 201
 
-def run(algorithm, calculate_positions=True):
-    try: allocations, machine_data = simulate(machines, processes, algorithm, calculate_positions)
+def run(algorithm, calculate_positions=True, real_time=False):
+    try: allocations, machine_data = simulate(machines, processes, algorithm, calculate_positions, real_time)
     except ValueError as error: return {"error": str(error)}, 400
     metrics = calculate(allocations, machine_data)
     for process in processes: save_process(process)
@@ -67,7 +67,7 @@ def run(algorithm, calculate_positions=True):
 def simulation():
     algorithm = (request.get_json() or {}).get("algorithm", "FCFS").upper()
     if algorithm not in {"FCFS", "SJF", "PRIORITY"}: return jsonify(error="Unknown algorithm"), 400
-    result, status = run(algorithm); return jsonify(result), status
+    result, status = run(algorithm, real_time=True); return jsonify(result), status
 
 @app.post("/api/compare")
 def compare():

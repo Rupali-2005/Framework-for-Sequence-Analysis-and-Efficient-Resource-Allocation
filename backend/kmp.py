@@ -1,4 +1,5 @@
 """Knuth-Morris-Pratt pattern matching, implemented without string search helpers."""
+from time import sleep
 
 
 def prefix_table(pattern: str) -> list[int]:
@@ -29,8 +30,8 @@ def find_all(text: str, pattern: str) -> list[int]:
     return matches
 
 
-def find_all_by_capacity(text: str, pattern: str, capacity: int) -> list[int]:
-    """Run KMP in one-second chunks of no more than ``capacity`` characters."""
+def find_all_by_capacity(text: str, pattern: str, capacity: int, delay_seconds: float = 0) -> list[int]:
+    """Run KMP in chunks, pausing after each simulated second when requested."""
     if not pattern or capacity < 1:
         return []
     table, matches, matched = prefix_table(pattern), [], 0
@@ -44,4 +45,6 @@ def find_all_by_capacity(text: str, pattern: str, capacity: int) -> list[int]:
             if matched == len(pattern):
                 matches.append(index - len(pattern) + 1)
                 matched = table[matched - 1]
+        if delay_seconds:
+            sleep(delay_seconds)
     return matches
