@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 class Machine:
     id: int
     name: str
-    capacity: int  # work units per simulated second
+    capacity: int  # characters scanned per simulated second
     ready_queue: list[int] = field(default_factory=list)
     busy_until: float = 0.0
 
@@ -17,7 +17,6 @@ class Process:
     sequence: str
     pattern: str
     priority: int
-    work_units: int
     matches: list[int] = field(default_factory=list)
     estimated_time: float = 0.0
     status: str = "Queued"

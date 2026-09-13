@@ -27,3 +27,21 @@ def find_all(text: str, pattern: str) -> list[int]:
             matches.append(index - len(pattern) + 1)
             matched = table[matched - 1]
     return matches
+
+
+def find_all_by_capacity(text: str, pattern: str, capacity: int) -> list[int]:
+    """Run KMP in one-second chunks of no more than ``capacity`` characters."""
+    if not pattern or capacity < 1:
+        return []
+    table, matches, matched = prefix_table(pattern), [], 0
+    for start in range(0, len(text), capacity):
+        for index in range(start, min(start + capacity, len(text))):
+            character = text[index]
+            while matched and character != pattern[matched]:
+                matched = table[matched - 1]
+            if character == pattern[matched]:
+                matched += 1
+            if matched == len(pattern):
+                matches.append(index - len(pattern) + 1)
+                matched = table[matched - 1]
+    return matches

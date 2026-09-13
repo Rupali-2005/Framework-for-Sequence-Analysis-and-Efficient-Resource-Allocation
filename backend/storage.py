@@ -22,7 +22,7 @@ def save_machine(machine):
 
 
 def save_process(process):
-    return execute("INSERT INTO processes (id,name,sequence_data,pattern_text,priority,work_units,match_count,status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE status=VALUES(status),match_count=VALUES(match_count)", (process.id,process.name,process.sequence,process.pattern,process.priority,process.work_units,len(process.matches),process.status))
+    return execute("INSERT INTO processes (id,name,sequence_data,pattern_text,priority,work_units,match_count,status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE status=VALUES(status),match_count=VALUES(match_count)", (process.id,process.name,process.sequence,process.pattern,process.priority,len(process.sequence),len(process.matches),process.status))
 
 
 def save_run(algorithm, metrics, allocations):

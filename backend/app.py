@@ -1,7 +1,6 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from dotenv import load_dotenv
-from kmp import find_all
 from models import Machine, Process
 from scheduling import simulate
 from metrics import calculate
@@ -15,7 +14,7 @@ next_machine_id = next_process_id = 1
 
 def process_dict(p):
     return {"id": p.id, "name": p.name, "sequence": p.sequence, "pattern": p.pattern, "priority": p.priority,
-            "work_units": p.work_units, "matches": len(p.matches), "match_positions": p.matches,
+            "matches": len(p.matches) if p.status == "Completed" else None, "match_positions": p.matches if p.status == "Completed" else [],
             "estimated_time": p.estimated_time, "status": p.status}
 
 @app.get("/")
@@ -36,21 +35,28 @@ def add_machine():
     next_machine_id += 1; machines.append(machine); save_machine(machine)
     return jsonify({"id":machine.id,"name":machine.name,"capacity":machine.capacity,"queue":[]}), 201
 
+@app.delete("/api/machines/<int:machine_id>")
+def delete_machine(machine_id):
+    global machines
+    if not any(machine.id == machine_id for machine in machines):
+        return jsonify(error="Virtual machine not found"), 404
+    machines = [machine for machine in machines if machine.id != machine_id]
+    return jsonify(message="Virtual machine deleted")
+
 @app.post("/api/processes")
 def add_process():
     global next_process_id
     data = request.get_json() or {}
     try:
         sequence, pattern = str(data["sequence"]).replace(" ", "").upper(), str(data["pattern"]).upper()
-        process = Process(next_process_id, str(data["name"]).strip(), sequence, pattern, int(data["priority"]), int(data["work_units"]))
-        if not process.name or not sequence or not pattern or process.priority < 1 or process.work_units < 1: raise ValueError
+        process = Process(next_process_id, str(data["name"]).strip(), sequence, pattern, int(data["priority"]))
+        if not process.name or not sequence or not pattern or process.priority < 1: raise ValueError
     except (KeyError, TypeError, ValueError): return jsonify(error="Provide valid process fields"), 400
-    process.matches = find_all(process.sequence, process.pattern)
     next_process_id += 1; processes.append(process); save_process(process)
     return jsonify(process_dict(process)), 201
 
-def run(algorithm):
-    try: allocations, machine_data = simulate(machines, processes, algorithm)
+def run(algorithm, calculate_positions=True):
+    try: allocations, machine_data = simulate(machines, processes, algorithm, calculate_positions)
     except ValueError as error: return {"error": str(error)}, 400
     metrics = calculate(allocations, machine_data)
     for process in processes: save_process(process)
@@ -68,7 +74,7 @@ def compare():
     if not processes: return jsonify(error="Add at least one process"), 400
     results = {}
     for algorithm in ("FCFS", "SJF", "PRIORITY"):
-        result, status = run(algorithm)
+        result, status = run(algorithm, calculate_positions=False)
         if status != 200: return jsonify(result), status
         results[algorithm] = result["metrics"]
     return jsonify(results)
