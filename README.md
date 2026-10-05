@@ -31,8 +31,30 @@ FESARA's objective is to bring both halves together in one system:
 - **IDE:** VS Code
 
 ## Project Setup / Installation Instructions
-
-
+### Project Structure
+```
+  frontend/
+    index.html
+    app.js
+    style.css
+  backend/
+    app.py
+    kmp.py
+    metrics.py
+    models.py
+    scheduling.py
+    requirements.txt
+    test_core.py
+```
+1. From inside Backend/, install dependencies:
+```
+   pip install -r requirements.txt
+```  
+2.   Run the server:
+```
+   python app.py
+```  
+4. Open http://127.0.0.1:5000 in a browser.  
 ## Major Features / Modules
 
 ### Frontend
@@ -53,4 +75,7 @@ FESARA's objective is to bring both halves together in one system:
 - Backend (FastAPI + scheduling/deadlock logic) and database (MySQL schema,dedup,transactions,recovery) are the next major milestones.
 
 ---
+
+## Initial ER Model  
+<img width="1275" height="1650" alt="ER_Image" src="https://github.com/user-attachments/assets/7702d9e6-d3b0-462a-b185-071e55ed4d06" />
 
