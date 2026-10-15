@@ -1,4 +1,4 @@
-# FESARA-Framework for Efficient Sequential Analysis and Resource Allocation
+# FESARA - Framework for Efficient Sequential Analysis and Resource Allocation
 
 ## Description
 
@@ -12,10 +12,10 @@ Multiple users submit large sequential-data jobs which compete for limited CPU a
 
 FESARA's objective is to bring both halves together in one system:
 
-- Build a scheduler that assigns limited processor and memory resources to competing jobs based on priority,without exceeding configured limits
-- Run multiple jobs concurrently using worker threads with shared resources tracked safely
-- Deliberately construct,detect and resolve a deadlock scenario
-- Design a relational schema that avoids storing duplicate input data,supports safe concurrent updates to job state and can fully reconstruct system state after a crash
+- Build a scheduler that assigns limited processor resources to competing jobs in an efficient manner
+- Run jobs through a simulated multi-machine environment where processing speed depends on each machine's capacity.
+- Comparision and visualization of different scheduling algorithms
+- Design a relational schema that avoids storing duplicate input data,supports safe concurrent updates to job state and can fully reconstruct system state after a crash.
 
 ## Team Members  
 - *Rupali Rana(Leader)*
@@ -24,58 +24,82 @@ FESARA's objective is to bring both halves together in one system:
 
 ## Technologies / Tools Used
 
-- **Frontend:** HTML,CSS,JavaScript 
-- **Backend (planned):** Python,FastAPI
-- **Database (planned):** MySQL
-- **Version control:** Git/ GitHub
+- **Frontend:** HTML,CSS,JavaScript (vanilla)
+- **Backend:** Python,Flask
+- **Database:** MySQL
+- **Charts:** matplotlib 
+- **Version control:** Git / GitHub
 - **IDE:** VS Code
 
 ## Project Setup / Installation Instructions
-### Project Structure
+
+Project structure (frontend and backend sit in sibling folders):
+
 ```
+PBL/
+database.sql
   frontend/
     index.html
     app.js
     style.css
   backend/
     app.py
+    charts.py
     kmp.py
     metrics.py
     models.py
     scheduling.py
+    storage.py
     requirements.txt
-    test_core.py
+    .env
 ```
-1. From inside Backend/, install dependencies:
-```
+
+1. **Start your MySQL server.** 
+2. **Create a `.env` file inside `backend/`** with your MySQL settings. All of these are optional and fall back to the defaults shown:
+   ```
+   MYSQL_HOST=127.0.0.1
+   MYSQL_PORT=3306
+   MYSQL_USER=your_username
+   MYSQL_PASSWORD=your_password
+   MYSQL_DATABASE=PBL
+   ```
+3. From inside `backend/`,install dependencies:
+   ```
    pip install -r requirements.txt
-```  
-2.   Run the server:
-```
+   ```
+   
+4. Run the server:
+   ```
    python app.py
-```  
-4. Open http://127.0.0.1:5000 in a browser.  
+   ```
+5. Open `http://127.0.0.1:5000` in a browser. 
+
+
 ## Major Features / Modules
 
-### Frontend
-- **Add Virtual Machine**-form to register a simulated processor with a name and processing capacity (units/s).
-- **Submit Process**-form to submit a job: name,sequence data,pattern to search for,priority and work units.
-- **Scheduling algorithm selector**-dropdown to choose between FCFS,SJFand Priority scheduling .
-- **Machine allocation view**-live display of each registered machine and its current ready-queue length.
-- **Process table**-live table of every submitted process,showing pattern matches,priority,estimated timeand status.
-- **Metrics dashboard placeholder**-reserved section for simulation results once the backend is connected.
+### Implemented so far
+- **Virtual machines** - register a simulated processor with a name and capacity (characters processed per second) 
+- **Processes** - submit a job (name,sequence,pattern,priority,work units). Saved to MySQL. 
+- **Scheduling algorithms** - `scheduling.py` supports **FCFS,SJF,Priority,Round Robin (RR) and SRTF**
+- **Pattern matching (KMP)** - `kmp.py` finds every occurrence (including overlapping ones) of a pattern in linear time using Knuth Morris Pratt Algorithm. 
+- **Compare all** - runs all five algorithms on copies of the current machines and processes ,saves each run to MySQL and returns the metrics together with a bar chart comparing different metrics(`charts.py`).
+- **Metrics** - `metrics.py` calculates average waiting time,average turnaround time,makespan,throughput and per-machine utilization.
+- **MySQL persistence** - `storage.py` creates the schema on first use (`machines`,`processes`,`simulation_runs`,`allocations`),saves every change and reloads machines and processes on server startup. 
+
+### Planned (not yet implemented)
+- **Deduplication of input sequences** - identical sequences are still stored separately; no content hashing yet.
+- **Append-only event log and crash-recovery replay** - the system reloads its last saved state on startup,but keeps no history of state transitions to replay.
+- **Creation and Allocation of Default roles** - to assign default priority on basis of roles
 
 ## Current Project Status / Progress
 
-**Phase: Early development-frontend only.**
+**Phase: Frontend,backend and MySQL persistence working together; five scheduling algorithms with comparison charts in place**
 
-- Frontend UI built:machine registration,process submission,scheduling algorithm selectorand live (client-side only) rendering of machines and processes.
-- No backend or database is connected yet-submitted machines and processes are currently held only in the browser's local state and are not scheduled,analyzedor persisted.
-- "Start simulation" and "Compare all" controls exist in the interface but are not yet wired to any logic.
-- Backend (FastAPI + scheduling/deadlock logic) and database (MySQL schema,dedup,transactions,recovery) are the next major milestones.
-
+- Machines and processes are created and  reloaded when the server restarts.
+- Five scheduling algorithms (FCFS,SJF,Priority,RR,SRTF) are implemented and can be run individually or compared side by side with a generated chart.
+- Simulations run in the background with live status polling and each completed run is saved with its metrics and allocations.
+- **Not yet started:** optimization of data storage, append only event log and crash recovery, creation of default roles
 ---
-
 ## Initial ER Model  
 <img width="1275" height="1650" alt="ER_Image" src="https://github.com/user-attachments/assets/7702d9e6-d3b0-462a-b185-071e55ed4d06" />
 
