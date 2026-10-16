@@ -1,27 +1,28 @@
-def calculate(allocs:list[dict],machines:list[dict])->dict:
-    if not allocs:
-        # Nothing to calculate yet
+def calculate(allocations:list[dict], machines:list[dict]) -> dict:
+    if not allocations:
         return {
             "average_waiting_time":0,
             "average_turnaround_time":0,
-            "makespan":0,
-            "machine_utilization":{}
+            "makespan":0, #Makespan is the total  time from the start of the first job  to the completion of the last job 
+            "throughput":0,
+            "machine_utilization":{},
         }
-    makespan=max(item["finish"] for item in allocs)
-    util={}
-    for mach in machines:
-        # Add up the time this machine was actually working
-        busy=sum(
-            item["estimated_time"]
-            for item in allocs
-            if item["machine_id"]==mach["id"]
-        )
-        util[mach["name"]]=round(
-            (busy/makespan*100) if makespan else 0,2
-        )
+
+    makespan=max(allocation["finish"] for allocation in allocations)
+    allocation_count=len(allocations)
+    utilization={}
+
+    for machine in machines:
+        busy_time=sum(allocation["estimated_time"] for allocation in allocations if allocation["machine_id"] == machine["id"] )
+        utilization[machine["name"]]=round(busy_time / makespan * 100 if makespan else 0,2, )
+
+    waiting_time=sum(allocation["turnaround_time"] - allocation["estimated_time"] for allocation in allocations )
+    turnaround_time=sum(allocation["turnaround_time"] for allocation in allocations)
+
     return {
-        "average_waiting_time":round(sum(a["waiting_time"] for a in allocs)/len(allocs),2),
-        "average_turnaround_time":round(sum(a["turnaround_time"] for a in allocs)/len(allocs),2),
-        "makespan":makespan,
-        "machine_utilization":util
+        "average_waiting_time":round(waiting_time / allocation_count, 2),
+        "average_turnaround_time":round(turnaround_time / allocation_count,2,),
+        "makespan":round(makespan, 2),
+        "throughput":round(allocation_count / makespan, 2) if makespan else 0,
+        "machine_utilization":utilization,
     }
