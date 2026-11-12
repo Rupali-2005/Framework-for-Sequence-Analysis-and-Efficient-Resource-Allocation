@@ -1,118 +1,171 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-<!--Tells mobile browsers "use the actual width of the phone screen, don't zoom out to fit a desktop-sized page." Without this, mobile visitors would see a tiny, zoomed-out version of your site.-->>
-  <title>OSDBMS-V-2026-T029</title>
-  <link rel="stylesheet" href="style.css"><!--Connects css file to html page-->>
-</head>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FESARA - Scheduling simulator</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main>
+      <header class="page-header">
+        <p class="team-mention">OSDBMS-V-2026-T029</p>
+        <h1>Efficient sequential analysis</h1>
+        <p>Allocate sequence-analysis jobs to virtual machines with deterministic scheduling.</p>
+      </header>
 
-<body><!--Everything visible goes inside body-->>
-  <main>
-    <!-- Page title and short description -->
-    <header>
-      <p class="team_mention">OSDBMS-V-2026-T029</p>
-      <h1>Efficient sequential analysis</h1>
-      <p>Allocate sequence-analysis jobs to virtual machines with deterministic scheduling.</p>
-    </header>
-
-    <div class="grid">
-
-      <!-- Form to register a new virtual machine (a "processor" in the simulation) -->
-      <section class="card">
-        <h2>Add virtual machine</h2>
-        <form id="machine-form">
-          <label>Name
-            <input name="name" required placeholder="VM-1">
+      <section id="login-panel" class="card login-panel">
+        <h2>Sign in</h2>
+        <form id="login-form">
+          <label>
+            Username
+            <input name="username" autocomplete="username" required>
           </label>
-          <label>Processing capacity (units/s)
-            <input name="capacity" type="number" min="1" value="10" required>
+          <label>
+            Password
+            <input name="password" type="password" autocomplete="current-password" required>
           </label>
-          <button>Add machine</button>
+          <button type="submit">Sign in</button>
         </form>
+        <p id="login-message" role="status"></p>
       </section>
 
-      <!-- Form to submit a new process (a job to be scheduled) -->
+      <div id="application" hidden>
+        <section class="card signed-in">
+          <span>Signed in as <strong id="current-role"></strong></span>
+          <button id="logout" class="secondary" type="button">Sign out</button>
+        </section>
+
+      <div class="form-grid">
+        <section class="card">
+          <h2>Add virtual machine</h2>
+          <form id="machine-form">
+            <label>
+              Name
+              <input name="name" required placeholder="VM-1">
+            </label>
+            <label>
+              Processing capacity (units/s)
+              <input name="capacity" type="number" min="1" value="10" required>
+            </label>
+            <button type="submit">Add machine</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2>Submit process</h2>
+          <form id="process-form">
+            <label>
+              Name
+              <input name="name" required placeholder="Genome scan">
+            </label>
+            <div class="sequence-field">
+              <input id="sequence" name="sequence" type="hidden">
+              <label for="sequence-file">Upload sequence files (.txt or .bin; up to 10)</label>
+              <input id="sequence-file" name="file" type="file" multiple accept="text/*,.txt,.csv,.bin,application/octet-stream">
+              <small id="sequence-file-info" class="muted"></small>
+            </div>
+            <input id="pattern" name="pattern" type="hidden">
+            <label for="pattern-file">Upload pattern file (.txt or .json)</label>
+            <input id="pattern-file" name="pattern_file" type="file" accept="text/*,.txt,.csv,.json,application/json">
+            <small id="pattern-file-info" class="muted"></small>
+            <div class="two-column">
+              <label>
+                Given priority (1 = highest)
+                <input name="priority" type="number" min="1" value="1" required>
+              </label>
+            </div>
+            <small class="muted">Work units are calculated from sequence length and signature count.</small>
+            <button type="submit">Submit process</button>
+          </form>
+        </section>
+      </div>
+
+      <section class="card controls" aria-label="Simulation controls">
+        <label for="algorithm">Scheduling algorithm
+          <select id="algorithm">
+            <option value="FCFS">FCFS</option>
+            <option value="SJF">SJF</option>
+            <option value="PRIORITY">Priority</option>
+            <option value="RR">Round Robin</option>
+            <option value="SRTF">SRTF</option>
+          </select>
+        </label>
+        <label for="time-quantum">Round Robin quantum
+          <input id="time-quantum" type="number" min="0.1" step="0.1" value="2">
+        </label>
+        <button id="run" type="button">Start simulation</button>
+        <button id="compare" class="secondary" type="button">Compare all</button>
+        <span id="message" role="status">Add machines and processes to begin.</span>
+      </section>
+
       <section class="card">
-        <h2>Submit process</h2>
-        <form id="process-form">
-          <label>Name
-            <input name="name" required placeholder="Genome scan">
-          </label>
-          <label>Sequence
-            <textarea name="sequence" required placeholder="ATGCGATG"></textarea>
-          </label>
-          <label>Pattern to find
-            <input name="pattern" required placeholder="ATG">
-          </label>
-          <div class="two">
-            <label>Priority (1 = highest)
-              <input name="priority" type="number" min="1" value="1" required>
-            </label>
-            <label>Work units
-              <input name="work_units" type="number" min="1" value="50" required>
-            </label>
+        <h2>Machine allocation &amp; ready queues</h2>
+        <div id="machines" class="machine-list">
+          <p class="muted">No virtual machines added.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Processes</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Process</th>
+                <th>Work units (calculated)</th>
+                <th>Pattern matches</th>
+                <th>Allocated VM</th>
+                <th>Priority</th>
+                <th>Estimated time (s)</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="processes">
+              <tr><td colspan="8" class="muted">No submitted processes.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" aria-live="polite">
+        <h2>Metrics dashboard</h2>
+        <div id="metrics" class="metrics">
+          <p class="muted">Run a simulation or compare algorithms to see results.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-title-row">
+          <div>
+            <h2>Dataset view</h2>
+            <p class="muted">Uploaded-file records and per-signature results.</p>
           </div>
-          <button>Submit process</button>
-        </form>
+          <button id="refresh-dataset" class="secondary" type="button">Refresh dataset</button>
+        </div>
+        <img id="dataset-chart" class="metrics-chart" alt="Bar chart of matches per uploaded sequence file" hidden>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Process</th>
+                <th>Sequence file</th>
+                <th>Pattern file</th>
+                <th>Matches by signature</th>
+                <th>Status</th>
+                <th>Content</th>
+              </tr>
+            </thead>
+            <tbody id="dataset">
+              <tr><td colspan="6" class="muted">Refresh the dataset to view file records.</td></tr>
+            </tbody>
+          </table>
+        </div>
       </section>
-
-    </div>
-
-    <!-- Choose an algorithm and run the simulation -->
-    <section class="card controls">
-      <label>Scheduling algorithm
-        <select id="algorithm">
-          <option value="FCFS">FCFS</option>
-          <option value="SJF">SJF</option>
-          <option value="PRIORITY">Priority</option>
-        </select>
-      </label>
-      <button id="run">Start simulation</button>
-      <button id="compare" class="secondary">Compare all</button>
-      <span id="message">Add machines and processes to begin.</span>
-    </section>
-
-    <!-- Live view of each machine and its ready queue -->
-    <section class="card">
-      <h2>Machine allocation & ready queues</h2>
-      <div id="machines" class="machine-list">
-        <p class="muted">No virtual machines added.</p>
       </div>
-    </section>
-
-    <!-- Table of every submitted process and its current status -->
-    <section class="card">
-      <h2>Processes</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Process</th>
-              <th>Pattern matches</th>
-              <th>Priority</th>
-              <th>Estimated time</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="processes">
-            <tr><td colspan="6" class="muted">No submitted processes.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- Results after running a simulation (filled in by app.js) -->
-    <section class="card">
-      <h2>Metrics dashboard</h2>
-      <div id="metrics" class="metrics">
-        <p class="muted">Run a simulation to see results.</p>
-      </div>
-    </section>
-
-  </main>
-  <script src="app.js"></script>
-</body>
+    </main>
+    <script src="app.js"></script>
+  </body>
 </html>

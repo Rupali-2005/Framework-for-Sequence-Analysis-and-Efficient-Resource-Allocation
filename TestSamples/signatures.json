@@ -1,0 +1,23 @@
+{
+  "format_version": 1,
+  "description": "Harmless string signatures for the inert DirMaker lab fixture",
+  "matching": "ASCII byte substring; case-sensitive",
+  "signatures": [
+    {
+      "name": "DIRMAKER-LAB family marker",
+      "pattern_ascii": "[SIMULATED_FAMILY: DIRMAKER-LAB]"
+    },
+    {
+      "name": "Create parent directory behavior marker",
+      "pattern_ascii": "[SIMULATED_ACTION: CREATE_ONE_PARENT_DIRECTORY]"
+    },
+    {
+      "name": "Create ten subdirectories behavior marker",
+      "pattern_ascii": "[SIMULATED_ACTION: CREATE_TEN_SUBDIRECTORIES]"
+    },
+    {
+      "name": "Unique DirMaker lab signature",
+      "pattern_ascii": "LAB_SIGNATURE_DIRMAKER_10_SUBDIRS_A19C42"
+    }
+  ]
+}

@@ -1,105 +1,51 @@
-# FESARA - Framework for Efficient Sequential Analysis and Resource Allocation
+# Framework for Efficient Sequential Analysis and Resource Allocation (FESARA)
 
-## Description
+FESARA is a small Flask application that simulates deterministic allocation of sequence-analysis processes to virtual machines. It uses KMP for sequence pattern matching and provides FCFS, SJF, Priority, Round Robin, and SRTF scheduling.
 
-FESARA is a systems level framework that processes long,sequential data (DNA-style,protein-style,byte streamsor any other sequential input) in scheduled batches.It simulates a configurable multi-processor environment where jobs are queued,scheduled by priority and analyzed for patterns while all jobs,resources and result data is persisted and managed through a relational database.
+## Run
 
-This project combines the concepts of Operating System and Database Management System. It needs a scheduler that shares limited processor and memory resources among competing jobs and correctly handles resource contention and deadlock,along with a database layer that avoids duplicate storage of input data,handles concurrent updates safely and can fully recover its state after a failure.
-
-## Problem Statement / Objective
-
-Multiple users submit large sequential-data jobs which compete for limited CPU and memory in a resource-constrained environment.Existing tools address only one half of this problem.Priority schedulers handle resource allocation and queuing but ignore data duplication and crash recovery while sequence-analysis pipelines handle the data processing but hand scheduling off to an external system and rarely account for deadlock or optimal resource allocation.
-
-FESARA's objective is to bring both halves together in one system:
-
-- Build a scheduler that assigns limited processor resources to competing jobs in an efficient manner
-- Run jobs through a simulated multi-machine environment where processing speed depends on each machine's capacity.
-- Comparision and visualization of different scheduling algorithms
-- Design a relational schema that avoids storing duplicate input data,supports safe concurrent updates to job state and can fully reconstruct system state after a crash.
-
-## Team Members  
-- *Rupali Rana(Leader)*
-- *Parth Batham*
-- *Aryan Rawat*
-
-## Technologies / Tools Used
-
-- **Frontend:** HTML,CSS,JavaScript (vanilla)
-- **Backend:** Python,Flask
-- **Database:** MySQL
-- **Charts:** matplotlib 
-- **Version control:** Git / GitHub
-- **IDE:** VS Code
-
-## Project Setup / Installation Instructions
-
-Project structure (frontend and backend sit in sibling folders):
-
-```
-PBL/
-database.sql
-  frontend/
-    index.html
-    app.js
-    style.css
-  backend/
-    app.py
-    charts.py
-    kmp.py
-    metrics.py
-    models.py
-    scheduling.py
-    storage.py
-    requirements.txt
-    .env
+```powershell
+python -m pip install -r backend\requirements.txt
+python backend\app.py
 ```
 
-1. **Start your MySQL server.** 
-2. **Create a `.env` file inside `backend/`** with your MySQL settings. All of these are optional and fall back to the defaults shown:
-   ```
-   MYSQL_HOST=127.0.0.1
-   MYSQL_PORT=3306
-   MYSQL_USER=your_username
-   MYSQL_PASSWORD=your_password
-   MYSQL_DATABASE=PBL
-   ```
-3. From inside `backend/`,install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-   
-4. Run the server:
-   ```
-   python app.py
-   ```
-5. Open `http://127.0.0.1:5000` in a browser. 
+Open `http://127.0.0.1:5000` and sign in with one of the three configured accounts. Add, edit, or remove shared machines, then upload up to 10 sequence files (5 MB each) and one pattern file to create a batch of processes. A batch uses the same pattern set and scheduling options for every uploaded sequence. Select an algorithm, then run or compare simulations. Completed processes are not scheduled again automatically; use **Requeue** to run a completed or failed process again while its content is available in memory. Round Robin uses the configurable quantum shown beside the algorithm selector. The metrics dashboard displays Matplotlib-generated graphs for waiting time, turnaround time, makespan, and machine utilization, and reports throughput and per-machine utilization.
 
+Each completed process exposes match counts and positions for every signature. The dataset view lists file metadata, per-signature results, and a graph of total matches per sequence file. It also shows persisted historical process records whose uploaded content is no longer available.
 
-## Major Features / Modules
+All submitted processes are ready at time zero in the current model. SRTF therefore selects the ready process with the shortest remaining processing time. Work is distributed to the machine with the lowest projected completion time; ties use machine ID, so results are repeatable.
 
-### Implemented so far
-- **Virtual machines** - register a simulated processor with a name and capacity (characters processed per second) 
-- **Processes** - submit a job (name,sequence,pattern,priority,work units). Saved to MySQL. 
-- **Scheduling algorithms** - `scheduling.py` supports **FCFS,SJF,Priority,Round Robin (RR) and SRTF**
-- **Pattern matching (KMP)** - `kmp.py` finds every occurrence (including overlapping ones) of a pattern in linear time using Knuth Morris Pratt Algorithm. 
-- **Compare all** - runs all five algorithms on copies of the current machines and processes ,saves each run to MySQL and returns the metrics together with a bar chart comparing different metrics(`charts.py`).
-- **Metrics** - `metrics.py` calculates average waiting time,average turnaround time,makespan,throughput and per-machine utilization.
-- **MySQL persistence** - `storage.py` creates the schema on first use (`machines`,`processes`,`simulation_runs`,`allocations`),saves every change and reloads machines and processes on server startup. 
+Work units are calculated automatically as the sequence length used for matching multiplied by the number of signatures (one when using a single pattern). This is a scheduling workload estimate, not a measured count of KMP comparisons. Pattern matching is performed when **Start simulation** is pressed, not when a process is submitted or when algorithms are compared. Before a run, estimated time is sequence length multiplied by the number of signatures and divided by the fastest available VM's capacity; when the scheduler assigns a VM, the estimate is updated using that VM's capacity. Each VM processes its assigned jobs in queue order, while jobs on different VMs run concurrently, so up to one job per VM can be `Processing` at a time. During KMP matching, each VM pauses for one second after processing each batch of sequence characters equal to its processing capacity, for each signature; pattern characters do not count toward the batch size. Estimates are approximate and do not include matching overhead.
 
-### Planned (not yet implemented)
-- **Deduplication of input sequences** - identical sequences are still stored separately; no content hashing yet.
-- **Append-only event log and crash-recovery replay** - the system reloads its last saved state on startup,but keeps no history of state transitions to replay.
-- **Creation and Allocation of Default roles** - to assign default priority on basis of roles
+Run the independent core tests with:
 
-## Current Project Status / Progress
+```powershell
+python -m unittest discover -s backend
+```
 
-**Phase: Frontend,backend and MySQL persistence working together; five scheduling algorithms with comparison charts in place**
+## MySQL persistence
 
-- Machines and processes are created and  reloaded when the server restarts.
-- Five scheduling algorithms (FCFS,SJF,Priority,RR,SRTF) are implemented and can be run individually or compared side by side with a generated chart.
-- Simulations run in the background with live status polling and each completed run is saved with its metrics and allocations.
-- **Not yet started:** optimization of data storage, append only event log and crash recovery, creation of default roles
----
-## Initial ER Model  
-<img width="1275" height="1650" alt="ER_Image" src="https://github.com/user-attachments/assets/7702d9e6-d3b0-462a-b185-071e55ed4d06" />
+The app connects to MySQL on its first request, creates or migrates the configured database tables, and reloads saved machines and processes. Machine configuration, process metadata, uploaded-file names and sizes, per-signature match statistics, individual simulation runs, allocations, and each algorithm in a comparison are saved to MySQL. Removed machines are deactivated so past allocations retain their machine references. If the database cannot be reached, API requests return a database error instead of silently falling back to memory.
 
+The defaults are host `127.0.0.1`, port `3306`, user `root`, an empty password, and database `PBL` (matching `database.sql`). Set `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, and optionally `MYSQL_DATABASE` in `.env` to match your MySQL setup. Ensure that user can create the database and tables on first run, or create the database and grant access beforehand.
+
+Create `backend\.env` and configure `FLASK_SECRET_KEY` plus the three username/password pairs: `PROFESSOR_USERNAME` / `PROFESSOR_PASSWORD`, `MANAGEMENT_USERNAME` / `MANAGEMENT_PASSWORD`, and `STUDENT_USERNAME` / `STUDENT_PASSWORD`. Choose strong, unique passwords and a long random secret key. There is no registration or built-in default password; the app accepts only accounts configured in this file. Role priorities are Professor `1`, Management `2`, and Student `3`. A job's effective priority is the average of its given priority and its submitter's role priority. The virtual machines are shared across all roles.
+
+```powershell
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=your_username
+MYSQL_PASSWORD=your_password
+MYSQL_DATABASE=PBL
+FLASK_SECRET_KEY=your_random_secret
+PROFESSOR_USERNAME=professor
+PROFESSOR_PASSWORD=choose_a_password
+MANAGEMENT_USERNAME=management
+MANAGEMENT_PASSWORD=choose_a_password
+STUDENT_USERNAME=student
+STUDENT_PASSWORD=choose_a_password
+```
+
+Machine and process state is refreshed from MySQL whenever the dashboard loads. Sequence and pattern text are entered only by uploading files (up to 5 MB); `.bin` sequence files are matched as raw bytes. A JSON pattern file may provide a `signatures` array; each entry's ASCII `pattern_ascii` is searched separately. The process table shows the total match count and the VM allocated to each completed process.
+
+For privacy, process sequence and pattern content are kept in memory only and are not persisted in MySQL. On startup, the app clears any legacy sequence and pattern values; jobs without that content are omitted from the active process list but remain visible as metadata in the dataset view. A job can be requeued while its content remains in memory; after a server restart, upload it again to run it. File metadata, per-signature match results, and simulation history remain stored.

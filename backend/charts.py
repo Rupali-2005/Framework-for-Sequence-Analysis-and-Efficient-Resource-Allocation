@@ -65,6 +65,52 @@ def dashboard_chart(results: dict[str, dict]) -> str:
     return f"data:image/png;base64,{image}"
 
 
+def dataset_chart(records: list[dict]) -> str:
+    figure_height = max(3.5, min(12, 0.35 * len(records) + 1.5))
+    figure = Figure(
+        figsize=(10, figure_height),
+        facecolor="#0b1220",
+        layout="constrained",
+    )
+    axis = figure.subplots()
+    axis.set_facecolor("#0c1626")
+
+    if records:
+        labels = [
+            f"{record['id']}: {record.get('sequence_filename') or record['name']}"
+            for record in records
+        ]
+        counts = [record.get("matches") or 0 for record in records]
+        axis.barh(labels, counts, color="#55d6be")
+        axis.invert_yaxis()
+        axis.set_xlabel("Total signature matches", color="#9aacc5")
+    else:
+        axis.text(
+            0.5,
+            0.5,
+            "No dataset records yet",
+            color="#9aacc5",
+            ha="center",
+            va="center",
+            transform=axis.transAxes,
+        )
+        axis.set_xticks([])
+        axis.set_yticks([])
+
+    axis.set_title("Matches per uploaded sequence file", color="#e9eef7")
+    axis.tick_params(colors="#b9c6da", labelsize=8)
+    axis.grid(axis="x", color="#263956", alpha=0.8)
+    axis.set_axisbelow(True)
+    for spine in axis.spines.values():
+        spine.set_color("#263956")
+
+    canvas = FigureCanvasAgg(figure)
+    output = BytesIO()
+    canvas.print_png(output)
+    image = base64.b64encode(output.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{image}"
+
+
 def _style_axis(axis) -> None:
     axis.set_facecolor("#0c1626")
     axis.tick_params(colors="#b9c6da", labelrotation=15)
